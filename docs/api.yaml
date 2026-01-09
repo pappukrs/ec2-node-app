@@ -1,0 +1,556 @@
+openapi: 3.0.0
+info:
+  title: 'Full Stack API'
+  version: 1.0.0
+  description: 'Production-ready backend API with JWT authentication'
+  contact:
+    name: 'API Support'
+    email: support@example.com
+  license:
+    name: ISC
+    url: 'https://opensource.org/licenses/ISC'
+servers:
+  -
+    url: 'http://localhost:3001'
+    description: 'Development server'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 'User unique identifier'
+        email:
+          type: string
+          format: email
+          description: 'User email address'
+        firstName:
+          type: string
+          description: 'User first name'
+        lastName:
+          type: string
+          description: 'User last name'
+        bio:
+          type: string
+          description: 'User biography'
+        avatarUrl:
+          type: string
+          format: uri
+          description: 'User avatar URL'
+        phone:
+          type: string
+          description: 'User phone number'
+        dateOfBirth:
+          type: string
+          format: date
+          description: 'User date of birth'
+        address:
+          $ref: '#/components/schemas/Address'
+        preferences:
+          type: object
+          description: 'User preferences'
+        emailVerified:
+          type: boolean
+          description: 'Email verification status'
+        createdAt:
+          type: string
+          format: date-time
+          description: 'Account creation timestamp'
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: 'User email address'
+        password:
+          type: string
+          minLength: 1
+          description: 'User password'
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+      properties:
+        email:
+          type: string
+          format: email
+          description: 'User email address'
+        password:
+          type: string
+          minLength: 6
+          description: 'User password (minimum 6 characters)'
+        firstName:
+          type: string
+          description: 'User first name'
+        lastName:
+          type: string
+          description: 'User last name'
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        bio:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        address:
+          $ref: '#/components/schemas/Address'
+        preferences:
+          type: object
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          description: 'Current password'
+        newPassword:
+          type: string
+          minLength: 6
+          description: 'New password (minimum 6 characters)'
+    DeleteAccountRequest:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          description: 'Current password for confirmation'
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+          description: 'JWT access token'
+    RefreshResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: 'New JWT access token'
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 'Response message'
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 'Error message'
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - OK
+          description: 'Service status'
+        timestamp:
+          type: string
+          format: date-time
+          description: 'Current timestamp'
+        environment:
+          type: string
+          description: 'Environment name'
+        version:
+          type: string
+          description: 'API version'
+    UsersSearchResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        limit:
+          type: integer
+          description: 'Number of results per page'
+        offset:
+          type: integer
+          description: 'Pagination offset'
+security:
+  -
+    bearerAuth: []
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: 'Register a new user'
+      description: 'Create a new user account with email and password'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: 'User created successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: 'Invalid input data'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'User already exists'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: 'User login'
+      description: 'Authenticate user and return access token'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 'Login successful'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: 'Invalid credentials'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Account deactivated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: 'Refresh access token'
+      description: 'Get a new access token using refresh token from cookies'
+      security:
+        -
+          cookieAuth: []
+      responses:
+        '200':
+          description: 'Token refreshed successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          description: 'Invalid refresh token'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: 'User logout'
+      description: 'Logout user and revoke refresh token'
+      security:
+        -
+          cookieAuth: []
+      responses:
+        '200':
+          description: 'Logout successful'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+  /api/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: 'Get current user profile'
+      description: 'Get authenticated user''s profile information'
+      security:
+        -
+          bearerAuth: []
+      responses:
+        '200':
+          description: 'User profile retrieved successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'User not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/users/profile:
+    put:
+      tags:
+        - 'User Management'
+      summary: 'Update user profile'
+      description: 'Update authenticated user''s profile information'
+      security:
+        -
+          bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: 'Profile updated successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/users/account:
+    delete:
+      tags:
+        - 'User Management'
+      summary: 'Delete user account'
+      description: 'Permanently delete authenticated user''s account'
+      security:
+        -
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+      responses:
+        '200':
+          description: 'Account deleted successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: 'Incorrect password'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/users/password:
+    put:
+      tags:
+        - 'User Management'
+      summary: 'Change password'
+      description: 'Change authenticated user''s password'
+      security:
+        -
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: 'Password changed successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: 'Invalid input or incorrect current password'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/users/search:
+    get:
+      tags:
+        - 'User Management'
+      summary: 'Search users'
+      description: 'Search for users by name or email'
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          in: query
+          name: q
+          schema:
+            type: string
+          required: true
+          description: 'Search query (minimum 2 characters)'
+        -
+          in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          description: 'Number of results per page'
+        -
+          in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: 'Pagination offset'
+      responses:
+        '200':
+          description: 'Users found successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersSearchResponse'
+        '400':
+          description: 'Invalid search query'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/api/users/{userId}':
+    get:
+      tags:
+        - 'User Management'
+      summary: 'Get user profile'
+      description: 'Get user profile by ID (public information)'
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: 'User ID'
+      responses:
+        '200':
+          description: 'User profile retrieved successfully'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/User'}
+                  - {type: object, properties: {isOwnProfile: {type: boolean, description: 'Whether this is the authenticated user''s own profile'}}}
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'User not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /health:
+    get:
+      tags:
+        - System
+      summary: 'Health check'
+      description: 'Check API health status'
+      responses:
+        '200':
+          description: 'Service is healthy'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /docs:
+    get:
+      tags:
+        - System
+      summary: 'API Documentation'
+      description: 'Swagger UI for API documentation'
+      responses:
+        '200':
+          description: 'Swagger UI page'
+tags: []

@@ -1,0 +1,86 @@
+services:
+  # PostgreSQL Database (Development)
+  postgres:
+    image: postgres:15-alpine
+    container_name: fullstack_postgres_dev
+    environment:
+      POSTGRES_DB: fullstack_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./src/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - fullstack_dev_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Development)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fullstack_backend_dev
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: fullstack_app
+      DB_USER: postgres
+      DB_PASS: dev_password
+      JWT_ACCESS_SECRET: dev_access_secret_key_here_for_development_only
+      JWT_REFRESH_SECRET: dev_refresh_secret_key_here_for_development_only
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:3000
+      LOG_LEVEL: debug
+      ENABLE_SWAGGER: true
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fullstack_dev_network
+    restart: unless-stopped
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: node src/server.js
+
+  # PgAdmin (Development only)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: fullstack_pgadmin_dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - fullstack_dev_network
+    restart: unless-stopped
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  postgres_dev_data:
+  pgadmin_data:
+
+networks:
+  fullstack_dev_network:
+    driver: bridge

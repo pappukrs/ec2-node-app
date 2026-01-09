@@ -1,0 +1,10 @@
+# Main docker-compose file
+# Use with --env-file to specify environment variables
+# For development: docker compose -f docker-compose.dev.yml up
+# For production: docker compose -f docker-compose.prod.yml up
+
+# This file serves as documentation - use the specific environment files
+# Development: docker compose -f docker-compose.dev.yml up -d
+# Production: docker compose -f docker-compose.prod.yml up -d
+
+services: {}
