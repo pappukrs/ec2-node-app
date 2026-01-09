@@ -69,11 +69,22 @@ exports.register = async (req, res) => {
       VALUES ($1, $2, $3)
     `, [user.id, refreshTokenHash, expiresAt]);
 
-    // Set refresh token cookie
-    res.cookie('refreshToken', refreshToken, {
+    // // Set refresh token cookie
+    // res.cookie('refreshToken', refreshToken, {
+    //   httpOnly: true,
+    //   secure: config.server.isProduction,
+    //   sameSite: 'strict',
+    //   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    // });
+
+
+
+
+     // Set refresh token cookie
+     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: config.server.isProduction,
-      sameSite: 'strict',
+      secure: false,
+      sameSite: 'Lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -143,12 +154,21 @@ exports.login = async (req, res) => {
     `, [user.id, refreshTokenHash, expiresAt]);
 
     // Set refresh token cookie
+    // res.cookie('refreshToken', refreshToken, {
+    //   httpOnly: true,
+    //   secure: config.server.isProduction,
+    //   sameSite: 'strict',
+    //   maxAge: 7 * 24 * 60 * 60 * 1000
+    // });
+
+
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: config.server.isProduction,
-      sameSite: 'strict',
+      secure: false,
+      sameSite: 'Lax',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
+
 
     res.json({
       user: {
