@@ -40,7 +40,7 @@ services:
   # Frontend (Next.js)
   # =========================
   frontend:
-    image: pappukrs/ec2-nextjs-app:latest
+    image: pappukrs/ec2-nextjs-app:v1
     container_name: fullstack_frontend_prod
     environment:
       NODE_ENV: production
