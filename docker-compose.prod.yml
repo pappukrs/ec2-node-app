@@ -1,5 +1,9 @@
+version: "3.9"
+
 services:
+  # =========================
   # Backend API (Production)
+  # =========================
   backend:
     build:
       context: .
@@ -7,7 +11,7 @@ services:
     container_name: fullstack_backend_prod
     environment:
       NODE_ENV: production
-      DB_HOST: ${DB_HOST}   # <-- RDS endpoint
+      DB_HOST: ${DB_HOST}        # RDS endpoint
       DB_PORT: 5432
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
@@ -20,6 +24,8 @@ services:
       ENABLE_SWAGGER: ${ENABLE_SWAGGER:-false}
     expose:
       - "3001"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - fullstack_prod_network
     restart: unless-stopped
@@ -29,10 +35,29 @@ services:
       timeout: 30s
       retries: 3
       start_period: 60s
-    volumes:
-      - ./logs:/app/logs
 
-  # Nginx Proxy (Production)
+  # =========================
+  # Frontend (Next.js)
+  # =========================
+  frontend:
+    build:
+      context: ../ec2-nextjs-app
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: /api
+    container_name: fullstack_frontend_prod
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: /api
+    expose:
+      - "3000"
+    networks:
+      - fullstack_prod_network
+    restart: unless-stopped
+
+  # =========================
+  # Nginx Reverse Proxy
+  # =========================
   nginx:
     image: nginx:alpine
     container_name: fullstack_nginx_prod
@@ -49,25 +74,6 @@ services:
     networks:
       - fullstack_prod_network
     restart: unless-stopped
-
-
-
-frontend:
-  build:
-    context: ../ec2-nextjs-app
-    dockerfile: Dockerfile
-    args:
-      NEXT_PUBLIC_API_BASE_URL: /api
-  container_name: fullstack_frontend_prod
-  environment:
-    NODE_ENV: production
-    NEXT_PUBLIC_API_BASE_URL: /api
-  expose:
-    - "3000"
-  networks:
-    - fullstack_prod_network
-  restart: unless-stopped
-
 
 volumes:
   nginx_logs:
